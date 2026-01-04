@@ -196,189 +196,189 @@ public class HeadlessAllowList : ResoniteMod {
 	public static class CustomCommandPatch {
 		static void Postfix(CommandHandler handler) {
 			#pragma warning disable CS1998
-		handler.RegisterCommand(new GenericCommand("allowlist","allowlist control command", "Session [SessionId] list, Session [SessionId]<enable/disable/add/remove/block> [UserId], Session [SessionId] exclusive <enable/disable>, global <add/remove> [UserId}, global list", 
-			async (h, w, args) => {
-				if (args.Count < 1) {
-					Msg("Must contain at least 1 subcommand. allowlist [global/session]");
-					return;
-				}
-				
+		handler.RegisterCommand(new GenericCommand("allowlist","allowlist control command", "Session [SessionId] list, Session [SessionId]<enable/disable/add/remove/block> [UserId], Session [SessionId] exclusive <enable/disable>, global <add/remove> [UserId}, global list", CommandHandler));
+#pragma warning restore CS1998
+		}
+	}
+	public static void CommandHandler(CommandHandler h, World w, List<string> args) {
+		if (args.Count < 1) {
+			Msg("Must contain at least 1 subcommand. allowlist [global/session]");
+			return;
+		}
+		
 
-				switch (args[0].ToLower()) {
-					case "help":
-						Msg("allowlist [global/session]");
-						break;
-					case "global":
-						if (args.Count < 2) {
-							Msg("Must contain at least one subcommand. allowlist global [add/remove/list/message]");
+		switch (args[0].ToLower()) {
+			case "help":
+				Msg("allowlist [global/session]");
+				break;
+			case "global":
+				if (args.Count < 2) {
+					Msg("Must contain at least one subcommand. allowlist global [add/remove/list/message]");
+					break;
+				}
+				switch (args[1].ToLower()) {
+					case "add":
+						if (args.Count < 3) {
+							Msg("Must contain UserId. allowlist global add [UserID]");
 							break;
 						}
-						switch (args[1].ToLower()) {
-							case "add":
-								if (args.Count < 3) {
-									Msg("Must contain UserId. allowlist global add [UserID]");
-									break;
-								}
-								AddUser(args[2]);
-								break;
-							case "remove":
-								if (args.Count < 3) {
-									Msg("Must contain UserId. allowlist global remove [UserID]");
-									break;
-								}
-								RemoveUser(args[2]);
-								break;
-							case "list":
-								listUsers();
-								break;
-							case "block":
-								if (args.Count < 3) {
-									Msg("Must contain UserId. allowlist global block [UserID]");
-									break;
-								}
-								BlockUser(args[2]);
-								break;
-							case "unblock":
-								if (args.Count < 4) {
-									Msg("Must contain UserId. allowlist global unblock [UserID]");
-									break;
-								}
-								UnblockUser(args[3]);
-								break;
-							case "message":
-								if (args.Count < 3) {
-									Msg("Must contain subcommand. allowlist global message [set/remove]");
-									break;
-								}
-								switch (args[2].ToLower()) {
-									case "set":
-										if (args.Count < 4) {
-											Msg("Must contain message. allowlist global message set [DenyMessage]");
-											break;
-										}
-										string message = String.Join(" ", args.GetRange(3,args.Count - 3));
-										message = message.Replace("\"", "");
-										denyMessageSet(message);
-										break;
-									case "remove":
-										denyMessageRemove();
-										break;
-									default:
-										Msg("Not as valid sub-command. allowlist global message [set/remove]");
-										break;
-								}
-								break;
-							default:
-								Msg("Not a valid sub-command. allowlist global [add/remove/list/message]");
-								break;
-						}
+						AddUser(args[2]);
 						break;
-					case "session":
-						switch (args.Count) {
-							case 1:
-								Msg("Must contain SessionId. allowlist session [SessionID] add/remove/block/unblock/enable/disable/exclusive/list ");
-								break;
-							case 2:
-								Msg("Must contain at least one subcommand. allowlist session [SessionID] add/remove/block/unblock/enable/disable/exclusive/list");
-								break;
+					case "remove":
+						if (args.Count < 3) {
+							Msg("Must contain UserId. allowlist global remove [UserID]");
+							break;
 						}
-
-						string session;
-						if (args[1] == "@") {
-							session = w.SessionId;
-						} else {
-							session = args[1];
+						RemoveUser(args[2]);
+						break;
+					case "list":
+						listUsers();
+						break;
+					case "block":
+						if (args.Count < 3) {
+							Msg("Must contain UserId. allowlist global block [UserID]");
+							break;
+						}
+						BlockUser(args[2]);
+						break;
+					case "unblock":
+						if (args.Count < 4) {
+							Msg("Must contain UserId. allowlist global unblock [UserID]");
+							break;
+						}
+						UnblockUser(args[3]);
+						break;
+					case "message":
+						if (args.Count < 3) {
+							Msg("Must contain subcommand. allowlist global message [set/remove]");
+							break;
 						}
 						switch (args[2].ToLower()) {
-							case "add":
+							case "set":
 								if (args.Count < 4) {
-									Msg("Must contain UserId. allowlist session [SessionID] add [UserID]");
+									Msg("Must contain message. allowlist global message set [DenyMessage]");
 									break;
 								}
-								AddUser(args[3],session);
+								string message = String.Join(" ", args.GetRange(3,args.Count - 3));
+								message = message.Replace("\"", "");
+								denyMessageSet(message);
 								break;
 							case "remove":
-								if (args.Count < 4) {
-									Msg("Must contain UserId. allowlist session [SessionID] remove [UserID]");
-									break;
-								}
-								RemoveUser(args[3],session);
-								break;
-							case "block":
-								if (args.Count < 4) {
-									Msg("Must contain UserId. allowlist session [SessionID] block [UserID]");
-									break;
-								}
-								BlockUser(args[3],session);
-								break;
-							case "unblock":
-								if (args.Count < 4) {
-									Msg("Must contain UserId. allowlist session [SessionID] unblock [UserID]");
-									break;
-								}
-								UnblockUser(args[3],session);
-								break;
-							case "list":
-								listUsers(session);
-								break;
-							case "enable":
-								enable(session);
-								break;
-							case "disable":
-								disable(session);
-								break;
-							case "exclusive":
-								if (args.Count < 4) {
-									Msg("Must contain at least one subcommand. allowlist session [SessionID] exclusive enable/disable");
-									return;
-								}
-
-								switch (args[4].ToLower()) {
-									case "enable":
-										exclusiveEnable(session);
-										break;
-									case "disable":
-										exclusiveDisable(session);
-										break;
-									default:
-										Msg("Not a valid sub-command. allowlist session [SessionID] exclusive enable/disable");
-										break;
-								}
-								break;
-							case "message":
-								if (args.Count < 4) {
-									Msg("Must contain subcommand. allowlist session [SessionID] message [set/remove]");
-									break;
-								}
-								switch (args[3].ToLower()) {
-									case "set":
-										if (args.Count < 5) {
-											Msg("Must contain message. allowlist session [SessionID] message set [DenyMessage]");
-											break;
-										}
-
-										string message = String.Join(" ", args.GetRange(4,args.Count - 4));
-										denyMessageSet(message,session);
-										break;
-									case "remove":
-										denyMessageRemove(session);
-										break;
-									default:
-										Msg("Not as valid sub-command. allowlist session [SessionID] message [set/remove]");
-										break;
-								}
+								denyMessageRemove();
 								break;
 							default:
-								Msg("Not a valid sub-command. allowlist session [SessionID] add/remove/block/unblock/enable/disable/exclusive/list");
+								Msg("Not as valid sub-command. allowlist global message [set/remove]");
 								break;
 						}
 						break;
 					default:
-						Msg("Not a valid sub-command");
+						Msg("Not a valid sub-command. allowlist global [add/remove/list/message]");
 						break;
 				}
-			}));
-#pragma warning restore CS1998
+				break;
+			case "session":
+				switch (args.Count) {
+					case 1:
+						Msg("Must contain SessionId. allowlist session [SessionID] add/remove/block/unblock/enable/disable/exclusive/list ");
+						break;
+					case 2:
+						Msg("Must contain at least one subcommand. allowlist session [SessionID] add/remove/block/unblock/enable/disable/exclusive/list");
+						break;
+				}
+
+				string session;
+				if (args[1] == "@") {
+					session = w.SessionId;
+				} else {
+					session = args[1];
+				}
+				switch (args[2].ToLower()) {
+					case "add":
+						if (args.Count < 4) {
+							Msg("Must contain UserId. allowlist session [SessionID] add [UserID]");
+							break;
+						}
+						AddUser(args[3],session);
+						break;
+					case "remove":
+						if (args.Count < 4) {
+							Msg("Must contain UserId. allowlist session [SessionID] remove [UserID]");
+							break;
+						}
+						RemoveUser(args[3],session);
+						break;
+					case "block":
+						if (args.Count < 4) {
+							Msg("Must contain UserId. allowlist session [SessionID] block [UserID]");
+							break;
+						}
+						BlockUser(args[3],session);
+						break;
+					case "unblock":
+						if (args.Count < 4) {
+							Msg("Must contain UserId. allowlist session [SessionID] unblock [UserID]");
+							break;
+						}
+						UnblockUser(args[3],session);
+						break;
+					case "list":
+						listUsers(session);
+						break;
+					case "enable":
+						enable(session);
+						break;
+					case "disable":
+						disable(session);
+						break;
+					case "exclusive":
+						if (args.Count < 4) {
+							Msg("Must contain at least one subcommand. allowlist session [SessionID] exclusive enable/disable");
+							return;
+						}
+
+						switch (args[4].ToLower()) {
+							case "enable":
+								exclusiveEnable(session);
+								break;
+							case "disable":
+								exclusiveDisable(session);
+								break;
+							default:
+								Msg("Not a valid sub-command. allowlist session [SessionID] exclusive enable/disable");
+								break;
+						}
+						break;
+					case "message":
+						if (args.Count < 4) {
+							Msg("Must contain subcommand. allowlist session [SessionID] message [set/remove]");
+							break;
+						}
+						switch (args[3].ToLower()) {
+							case "set":
+								if (args.Count < 5) {
+									Msg("Must contain message. allowlist session [SessionID] message set [DenyMessage]");
+									break;
+								}
+
+								string message = String.Join(" ", args.GetRange(4,args.Count - 4));
+								denyMessageSet(message,session);
+								break;
+							case "remove":
+								denyMessageRemove(session);
+								break;
+							default:
+								Msg("Not as valid sub-command. allowlist session [SessionID] message [set/remove]");
+								break;
+						}
+						break;
+					default:
+						Msg("Not a valid sub-command. allowlist session [SessionID] add/remove/block/unblock/enable/disable/exclusive/list");
+						break;
+				}
+				break;
+			default:
+				Msg("Not a valid sub-command");
+				break;
 		}
 	}
 }

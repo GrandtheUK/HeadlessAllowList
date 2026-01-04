@@ -32,5 +32,13 @@
             <HintPath>$(ResonitePath)Resonite.dll</HintPath>
             <Private>false</Private>
         </Reference>
+        <Reference Include="SkyFrost.Base">
+            <HintPath>$(ResonitePath)SkyFrost.Base.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="SkyFrost.Base.Models">
+            <HintPath>$(ResonitePath)SkyFrost.Base.Models.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
 	</ItemGroup>
 </Project>

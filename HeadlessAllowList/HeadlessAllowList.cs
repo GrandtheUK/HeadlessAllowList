@@ -2,6 +2,9 @@ using FrooxEngine;
 using FrooxEngine.Headless;
 using HarmonyLib;
 using ResoniteModLoader;
+using SkyFrost.Base;
+
+using MessageType = SkyFrost.Base.MessageType;
 
 namespace HeadlessAllowList;
 
@@ -37,6 +40,9 @@ public class HeadlessAllowList : ResoniteMod {
 				{ "GLOBAL", "Denied by HeadlessAllowList mod. Contact server owner/operator for access" }
 			}));
 	
+	[AutoRegisterConfigKey]
+	private static readonly ModConfigurationKey<List<string>> AdminUsers = new ModConfigurationKey<List<string>>("AdminUsers","a list of users that are permitted to run chat commands to the headless", () => []);
+	
 	
 	private static ModConfiguration Config;
 	public override void OnEngineInit() {	
@@ -45,8 +51,25 @@ public class HeadlessAllowList : ResoniteMod {
 		Msg($"Got the allowList: {Config.GetValue(allowList)}");
 		Harmony harmony = new("com.GrandtheUK.HeadlessAllowList");
 		harmony.PatchAll();
+		Engine.Current.OnReady += () => {
+			Engine.Current.Cloud.Messages.OnMessageReceived += MessagesOnOnMessageReceived;
+		};
 	}
-	
+
+	private void MessagesOnOnMessageReceived(Message message) {
+		List<string> Admins = Config?.GetValue(AdminUsers);
+		if (!Admins.Contains(message.SenderId))
+			return;
+		if (message.MessageType != MessageType.Text)
+			return;
+		if (!message.Content.StartsWith("/"))
+			return;
+		List<string> com = message.Content.Substring(1).Split(" ").ToList();
+		if (com[0] != "allowlist")
+			return;
+		CommandHandler(null,Engine.Current.WorldManager.FocusedWorld,com.GetRange(1,com.Count-1));
+	}
+
 	[HarmonyPatch(typeof(World), "VerifyJoinRequest")]
 	public static class VerifyJoinRequestPatch {
 		static async Task<JoinGrant> Postfix(Task<JoinGrant> __result, SessionConnection connection) {
@@ -195,12 +218,11 @@ public class HeadlessAllowList : ResoniteMod {
 	[HarmonyPatch(typeof(HeadlessCommands), "SetupCommonCommands")]
 	public static class CustomCommandPatch {
 		static void Postfix(CommandHandler handler) {
-			#pragma warning disable CS1998
-		handler.RegisterCommand(new GenericCommand("allowlist","allowlist control command", "Session [SessionId] list, Session [SessionId]<enable/disable/add/remove/block> [UserId], Session [SessionId] exclusive <enable/disable>, global <add/remove> [UserId}, global list", CommandHandler));
-#pragma warning restore CS1998
+			handler.RegisterCommand(new GenericCommand("allowlist","allowlist control command", "Session [SessionId] list, Session [SessionId]<enable/disable/add/remove/block> [UserId], Session [SessionId] exclusive <enable/disable>, global <add/remove> [UserId}, global list", CommandHandler));
 		}
 	}
-	public static void CommandHandler(CommandHandler h, World w, List<string> args) {
+#pragma warning disable CS1998
+	async public static void CommandHandler(CommandHandler h, World w, List<string> args) {
 		if (args.Count < 1) {
 			Msg("Must contain at least 1 subcommand. allowlist [global/session]");
 			return;
@@ -381,4 +403,5 @@ public class HeadlessAllowList : ResoniteMod {
 				break;
 		}
 	}
+#pragma warning restore CS1998
 }

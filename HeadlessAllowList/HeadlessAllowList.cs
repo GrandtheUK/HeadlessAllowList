@@ -9,7 +9,7 @@ using MessageType = SkyFrost.Base.MessageType;
 namespace HeadlessAllowList;
 
 public class HeadlessAllowList : ResoniteMod {
-	internal const string VERSION_CONSTANT = "2.0.0"; 
+	internal const string VERSION_CONSTANT = "2.1.0"; 
 	public override string Name => "HeadlessAllowList";
 	public override string Author => "Grand";
 	public override string Version => VERSION_CONSTANT;
@@ -67,7 +67,7 @@ public class HeadlessAllowList : ResoniteMod {
 		List<string> com = message.Content.Substring(1).Split(" ").ToList();
 		if (com[0] != "allowlist")
 			return;
-		CommandHandler(null,Engine.Current.WorldManager.FocusedWorld,com.GetRange(1,com.Count-1));
+		CommandHandler(null,Engine.Current.WorldManager.FocusedWorld,com.GetRange(1,com.Count-1),message);
 	}
 
 	[HarmonyPatch(typeof(World), "VerifyJoinRequest")]
@@ -218,37 +218,51 @@ public class HeadlessAllowList : ResoniteMod {
 	[HarmonyPatch(typeof(HeadlessCommands), "SetupCommonCommands")]
 	public static class CustomCommandPatch {
 		static void Postfix(CommandHandler handler) {
-			handler.RegisterCommand(new GenericCommand("allowlist","allowlist control command", "Session [SessionId] list, Session [SessionId]<enable/disable/add/remove/block> [UserId], Session [SessionId] exclusive <enable/disable>, global <add/remove> [UserId}, global list", CommandHandler));
+			handler.RegisterCommand(new GenericCommand("allowlist","allowlist control command", "Session [SessionId] list, Session [SessionId]<enable/disable/add/remove/block> [UserId], Session [SessionId] exclusive <enable/disable>, global <add/remove> [UserId}, global list",
+				async (commandHandler, world, arguments) => {
+					CommandHandler(commandHandler,world,arguments,null);
+				}));
 		}
 	}
 #pragma warning disable CS1998
-	async public static void CommandHandler(CommandHandler h, World w, List<string> args) {
+	async public static void CommandHandler(CommandHandler h, World w, List<string> args, Message msg) {
+		static void messageOut(string message, Message origin) {
+			switch (origin) {
+				case null:
+					Msg(message);
+					break;
+				default:
+					UserMessages messages = Engine.Current.Cloud.Messages.GetUserMessages(origin.SenderId);
+					messages.SendTextMessage(message);
+					break;
+			}
+		}
 		if (args.Count < 1) {
-			Msg("Must contain at least 1 subcommand. allowlist [global/session]");
+			messageOut("Must contain at least 1 subcommand. allowlist [global/session]",msg);
 			return;
 		}
 		
 
 		switch (args[0].ToLower()) {
 			case "help":
-				Msg("allowlist [global/session]");
+				messageOut("allowlist [global/session]",msg);
 				break;
 			case "global":
 				if (args.Count < 2) {
-					Msg("Must contain at least one subcommand. allowlist global [add/remove/list/message]");
+					messageOut("Must contain at least one subcommand. allowlist global [add/remove/list/message]",msg);
 					break;
 				}
 				switch (args[1].ToLower()) {
 					case "add":
 						if (args.Count < 3) {
-							Msg("Must contain UserId. allowlist global add [UserID]");
+							messageOut("Must contain UserId. allowlist global add [UserID]",msg);
 							break;
 						}
 						AddUser(args[2]);
 						break;
 					case "remove":
 						if (args.Count < 3) {
-							Msg("Must contain UserId. allowlist global remove [UserID]");
+							messageOut("Must contain UserId. allowlist global remove [UserID]",msg);
 							break;
 						}
 						RemoveUser(args[2]);
@@ -258,27 +272,27 @@ public class HeadlessAllowList : ResoniteMod {
 						break;
 					case "block":
 						if (args.Count < 3) {
-							Msg("Must contain UserId. allowlist global block [UserID]");
+							messageOut("Must contain UserId. allowlist global block [UserID]",msg);
 							break;
 						}
 						BlockUser(args[2]);
 						break;
 					case "unblock":
 						if (args.Count < 4) {
-							Msg("Must contain UserId. allowlist global unblock [UserID]");
+							messageOut("Must contain UserId. allowlist global unblock [UserID]",msg);
 							break;
 						}
 						UnblockUser(args[3]);
 						break;
 					case "message":
 						if (args.Count < 3) {
-							Msg("Must contain subcommand. allowlist global message [set/remove]");
+							messageOut("Must contain subcommand. allowlist global message [set/remove]",msg);
 							break;
 						}
 						switch (args[2].ToLower()) {
 							case "set":
 								if (args.Count < 4) {
-									Msg("Must contain message. allowlist global message set [DenyMessage]");
+									messageOut("Must contain message. allowlist global message set [DenyMessage]",msg);
 									break;
 								}
 								string message = String.Join(" ", args.GetRange(3,args.Count - 3));
@@ -289,22 +303,22 @@ public class HeadlessAllowList : ResoniteMod {
 								denyMessageRemove();
 								break;
 							default:
-								Msg("Not as valid sub-command. allowlist global message [set/remove]");
+								messageOut("Not as valid sub-command. allowlist global message [set/remove]",msg);
 								break;
 						}
 						break;
 					default:
-						Msg("Not a valid sub-command. allowlist global [add/remove/list/message]");
+						messageOut("Not a valid sub-command. allowlist global [add/remove/list/message]",msg);
 						break;
 				}
 				break;
 			case "session":
 				switch (args.Count) {
 					case 1:
-						Msg("Must contain SessionId. allowlist session [SessionID] add/remove/block/unblock/enable/disable/exclusive/list ");
+						messageOut("Must contain SessionId. allowlist session [SessionID] add/remove/block/unblock/enable/disable/exclusive/list ",msg);
 						break;
 					case 2:
-						Msg("Must contain at least one subcommand. allowlist session [SessionID] add/remove/block/unblock/enable/disable/exclusive/list");
+						messageOut("Must contain at least one subcommand. allowlist session [SessionID] add/remove/block/unblock/enable/disable/exclusive/list",msg);
 						break;
 				}
 
@@ -317,28 +331,28 @@ public class HeadlessAllowList : ResoniteMod {
 				switch (args[2].ToLower()) {
 					case "add":
 						if (args.Count < 4) {
-							Msg("Must contain UserId. allowlist session [SessionID] add [UserID]");
+							messageOut("Must contain UserId. allowlist session [SessionID] add [UserID]",msg);
 							break;
 						}
 						AddUser(args[3],session);
 						break;
 					case "remove":
 						if (args.Count < 4) {
-							Msg("Must contain UserId. allowlist session [SessionID] remove [UserID]");
+							messageOut("Must contain UserId. allowlist session [SessionID] remove [UserID]",msg);
 							break;
 						}
 						RemoveUser(args[3],session);
 						break;
 					case "block":
 						if (args.Count < 4) {
-							Msg("Must contain UserId. allowlist session [SessionID] block [UserID]");
+							messageOut("Must contain UserId. allowlist session [SessionID] block [UserID]",msg);
 							break;
 						}
 						BlockUser(args[3],session);
 						break;
 					case "unblock":
 						if (args.Count < 4) {
-							Msg("Must contain UserId. allowlist session [SessionID] unblock [UserID]");
+							messageOut("Must contain UserId. allowlist session [SessionID] unblock [UserID]",msg);
 							break;
 						}
 						UnblockUser(args[3],session);
@@ -354,7 +368,7 @@ public class HeadlessAllowList : ResoniteMod {
 						break;
 					case "exclusive":
 						if (args.Count < 4) {
-							Msg("Must contain at least one subcommand. allowlist session [SessionID] exclusive enable/disable");
+							messageOut("Must contain at least one subcommand. allowlist session [SessionID] exclusive enable/disable",msg);
 							return;
 						}
 
@@ -366,19 +380,19 @@ public class HeadlessAllowList : ResoniteMod {
 								exclusiveDisable(session);
 								break;
 							default:
-								Msg("Not a valid sub-command. allowlist session [SessionID] exclusive enable/disable");
+								messageOut("Not a valid sub-command. allowlist session [SessionID] exclusive enable/disable",msg);
 								break;
 						}
 						break;
 					case "message":
 						if (args.Count < 4) {
-							Msg("Must contain subcommand. allowlist session [SessionID] message [set/remove]");
+							messageOut("Must contain subcommand. allowlist session [SessionID] message [set/remove]",msg);
 							break;
 						}
 						switch (args[3].ToLower()) {
 							case "set":
 								if (args.Count < 5) {
-									Msg("Must contain message. allowlist session [SessionID] message set [DenyMessage]");
+									messageOut("Must contain message. allowlist session [SessionID] message set [DenyMessage]",msg);
 									break;
 								}
 
@@ -389,17 +403,17 @@ public class HeadlessAllowList : ResoniteMod {
 								denyMessageRemove(session);
 								break;
 							default:
-								Msg("Not as valid sub-command. allowlist session [SessionID] message [set/remove]");
+								messageOut("Not as valid sub-command. allowlist session [SessionID] message [set/remove]",msg);
 								break;
 						}
 						break;
 					default:
-						Msg("Not a valid sub-command. allowlist session [SessionID] add/remove/block/unblock/enable/disable/exclusive/list");
+						messageOut("Not a valid sub-command. allowlist session [SessionID] add/remove/block/unblock/enable/disable/exclusive/list",msg);
 						break;
 				}
 				break;
 			default:
-				Msg("Not a valid sub-command");
+				messageOut("Not a valid sub-command",msg);
 				break;
 		}
 	}

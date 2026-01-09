@@ -9,7 +9,7 @@ using MessageType = SkyFrost.Base.MessageType;
 namespace HeadlessAllowList;
 
 public class HeadlessAllowList : ResoniteMod {
-	internal const string VERSION_CONSTANT = "2.1.0"; 
+	internal const string VERSION_CONSTANT = "2.2.0"; 
 	public override string Name => "HeadlessAllowList";
 	public override string Author => "Grand";
 	public override string Version => VERSION_CONSTANT;

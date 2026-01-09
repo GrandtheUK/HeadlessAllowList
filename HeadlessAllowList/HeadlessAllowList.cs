@@ -52,24 +52,16 @@ public class HeadlessAllowList : ResoniteMod {
 		Harmony harmony = new("com.GrandtheUK.HeadlessAllowList");
 		harmony.PatchAll();
 		Engine.Current.OnReady += () => {
-			Engine.Current.Cloud.Messages.OnMessageReceived += MessagesOnOnMessageReceived;
+			IEnumerable<ResoniteModBase> mods = ModLoader.Mods();
+			if (mods.Any(mod => mod.Name == "HeadlessTweaks")) {
+				ChatCommands.Init();
+				Msg("Added command to HeadlessTweaks");
+			} else {
+				Warn("HeadlessTweaks not found. Chat commands unavailable");
+			}
 		};
 	}
-
-	private void MessagesOnOnMessageReceived(Message message) {
-		List<string> Admins = Config?.GetValue(AdminUsers);
-		if (!Admins.Contains(message.SenderId))
-			return;
-		if (message.MessageType != MessageType.Text)
-			return;
-		if (!message.Content.StartsWith("/"))
-			return;
-		List<string> com = message.Content.Substring(1).Split(" ").ToList();
-		if (com[0] != "allowlist")
-			return;
-		CommandHandler(null,Engine.Current.WorldManager.FocusedWorld,com.GetRange(1,com.Count-1),message);
-	}
-
+	
 	[HarmonyPatch(typeof(World), "VerifyJoinRequest")]
 	public static class VerifyJoinRequestPatch {
 		static async Task<JoinGrant> Postfix(Task<JoinGrant> __result, SessionConnection connection) {
@@ -163,19 +155,19 @@ public class HeadlessAllowList : ResoniteMod {
 		Config?.Set(enabled,enable);
 		Config?.Save();
 	}
-	public static void listUsers(string SessionId = "GLOBAL") {
+	public static void listUsers(Message msg,string SessionId = "GLOBAL") {
 		Dictionary<string,List<string>> allow = Config?.GetValue(allowList);
 		if (!allow.ContainsKey(SessionId)) {
-			Msg($"No allowlist for {SessionId}");
+			messageOut($"No allowlist for {SessionId}",msg);
 			return;
 		}
 		switch (SessionId)
 		{
 			case "GLOBAL":
-				Msg($"Globally allowed users: {String.Join(",",allow["GLOBAL"])}");
+				messageOut($"Globally allowed users: {String.Join(", ",allow["GLOBAL"])}",msg);
 				break;
 			default:
-				Msg($"Allowed Users for session {SessionId}: {String.Join(",",allow[SessionId])}");
+				messageOut($"Allowed Users for session {SessionId}: {String.Join(", ",allow[SessionId])}",msg);
 				break;
 		}
 	}
@@ -214,29 +206,31 @@ public class HeadlessAllowList : ResoniteMod {
 		Config?.Save();
 	}
 	
-
+	static void messageOut(string message, Message origin) {
+		switch (origin) {
+			case null:
+				Msg(message);
+				break;
+			default:
+				UserMessages messages = Engine.Current.Cloud.Messages.GetUserMessages(origin.SenderId);
+				messages.SendTextMessage(message);
+				break;
+		}
+	}
 	[HarmonyPatch(typeof(HeadlessCommands), "SetupCommonCommands")]
 	public static class CustomCommandPatch {
 		static void Postfix(CommandHandler handler) {
 			handler.RegisterCommand(new GenericCommand("allowlist","allowlist control command", "Session [SessionId] list, Session [SessionId]<enable/disable/add/remove/block> [UserId], Session [SessionId] exclusive <enable/disable>, global <add/remove> [UserId}, global list",
+#pragma warning disable CS1998
 				async (commandHandler, world, arguments) => {
 					CommandHandler(commandHandler,world,arguments,null);
 				}));
+#pragma warning enable CS1998
 		}
 	}
 #pragma warning disable CS1998
 	async public static void CommandHandler(CommandHandler h, World w, List<string> args, Message msg) {
-		static void messageOut(string message, Message origin) {
-			switch (origin) {
-				case null:
-					Msg(message);
-					break;
-				default:
-					UserMessages messages = Engine.Current.Cloud.Messages.GetUserMessages(origin.SenderId);
-					messages.SendTextMessage(message);
-					break;
-			}
-		}
+		
 		if (args.Count < 1) {
 			messageOut("Must contain at least 1 subcommand. allowlist [global/session]",msg);
 			return;
@@ -246,6 +240,24 @@ public class HeadlessAllowList : ResoniteMod {
 		switch (args[0].ToLower()) {
 			case "help":
 				messageOut("allowlist [global/session]",msg);
+				break;
+			case "admin":
+				if (args.Count < 3) {
+					messageOut("Must contain at least one subcommand and one argument. allowlist admin [add/remove] [UserID]",msg);
+					break;
+				}
+
+				switch (args[1].ToLower()) {
+					case "add":
+						AddAdmin(args[2]);
+						break;
+					case "remove":
+						RemoveUser(args[2]);
+						break;
+					default:
+						messageOut("Invalid subcommand or argument. allowlist admin [add/remove] [UserID]",msg);
+						break;
+				}
 				break;
 			case "global":
 				if (args.Count < 2) {
@@ -268,7 +280,7 @@ public class HeadlessAllowList : ResoniteMod {
 						RemoveUser(args[2]);
 						break;
 					case "list":
-						listUsers();
+						listUsers(msg);
 						break;
 					case "block":
 						if (args.Count < 3) {
@@ -358,7 +370,7 @@ public class HeadlessAllowList : ResoniteMod {
 						UnblockUser(args[3],session);
 						break;
 					case "list":
-						listUsers(session);
+						listUsers(msg,session);
 						break;
 					case "enable":
 						enable(session);
@@ -416,6 +428,23 @@ public class HeadlessAllowList : ResoniteMod {
 				messageOut("Not a valid sub-command",msg);
 				break;
 		}
+	}
+
+	private static void AddAdmin(string userID) {
+		List<string> admins = Config?.GetValue(AdminUsers);
+		if (admins.Contains(userID))
+			return;
+		admins.Add(userID);
+		Config.Set(AdminUsers,admins);
+		Config.Save();
+	}
+	private static void RemoveAdmin(string userID) {
+		List<string> admins = Config?.GetValue(AdminUsers);
+		if (!admins.Contains(userID))
+			return;
+		admins.Remove(userID);
+		Config.Set(AdminUsers,admins);
+		Config.Save();
 	}
 #pragma warning restore CS1998
 }

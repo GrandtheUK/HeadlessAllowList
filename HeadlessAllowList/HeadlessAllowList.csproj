@@ -40,5 +40,9 @@
             <HintPath>$(ResonitePath)SkyFrost.Base.Models.dll</HintPath>
             <Private>False</Private>
         </Reference>
+        <Reference Include="HeadlessTweaks">
+            <HintPath>$(ResonitePath)rml_mods/HeadlessTweaks.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
 	</ItemGroup>
 </Project>

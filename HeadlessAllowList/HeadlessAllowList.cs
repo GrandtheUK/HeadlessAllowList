@@ -40,8 +40,6 @@ public class HeadlessAllowList : ResoniteMod {
 				{ "GLOBAL", "Denied by HeadlessAllowList mod. Contact server owner/operator for access" }
 			}));
 	
-	[AutoRegisterConfigKey]
-	private static readonly ModConfigurationKey<List<string>> AdminUsers = new ModConfigurationKey<List<string>>("AdminUsers","a list of users that are permitted to run chat commands to the headless", () => []);
 	
 	
 	private static ModConfiguration Config;
@@ -241,24 +239,6 @@ public class HeadlessAllowList : ResoniteMod {
 			case "help":
 				messageOut("allowlist [global/session]",msg);
 				break;
-			case "admin":
-				if (args.Count < 3) {
-					messageOut("Must contain at least one subcommand and one argument. allowlist admin [add/remove] [UserID]",msg);
-					break;
-				}
-
-				switch (args[1].ToLower()) {
-					case "add":
-						AddAdmin(args[2]);
-						break;
-					case "remove":
-						RemoveUser(args[2]);
-						break;
-					default:
-						messageOut("Invalid subcommand or argument. allowlist admin [add/remove] [UserID]",msg);
-						break;
-				}
-				break;
 			case "global":
 				if (args.Count < 2) {
 					messageOut("Must contain at least one subcommand. allowlist global [add/remove/list/message]",msg);
@@ -428,23 +408,6 @@ public class HeadlessAllowList : ResoniteMod {
 				messageOut("Not a valid sub-command",msg);
 				break;
 		}
-	}
-
-	private static void AddAdmin(string userID) {
-		List<string> admins = Config?.GetValue(AdminUsers);
-		if (admins.Contains(userID))
-			return;
-		admins.Add(userID);
-		Config.Set(AdminUsers,admins);
-		Config.Save();
-	}
-	private static void RemoveAdmin(string userID) {
-		List<string> admins = Config?.GetValue(AdminUsers);
-		if (!admins.Contains(userID))
-			return;
-		admins.Remove(userID);
-		Config.Set(AdminUsers,admins);
-		Config.Save();
 	}
 #pragma warning restore CS1998
 }
